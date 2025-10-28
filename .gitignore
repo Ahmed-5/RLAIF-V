@@ -6,3 +6,7 @@ pip.txt
 pip_test.txt
 test.py
 requirements.txt
+.vscode/
+Anaconda3*.sh
+*.egg-info/
+*.tar.gz
