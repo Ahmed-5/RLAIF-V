@@ -95,6 +95,20 @@ class TrainingArguments(transformers.TrainingArguments):
     dpo_use_average: bool = False
     dpo_token_weighted: bool = False
 
+    # KTO-specific arguments
+    kto_desirable_weight: float = field(default=1.0, metadata={"help": "Weight for desirable examples in KTO"})
+    kto_undesirable_weight: float = field(default=1.0, metadata={"help": "Weight for undesirable examples in KTO"})
+    
+    # SimPO-specific arguments
+    simpo_gamma: float = field(default=0.5, metadata={"help": "Target reward margin for SimPO"})
+    
+    # ORPO-specific arguments
+    orpo_alpha: float = field(default=1.0, metadata={"help": "Weight for SFT loss in ORPO"})
+    
+    # SPPO-specific arguments
+    sppo_gamma: float = field(default=0.5, metadata={"help": "Target reward margin for SPPO"})
+    sppo_preference_model_path: Optional[str] = field(default=None, metadata={"help": "Path to preference oracle model for SPPO"})
+
     mm_projector_lr: Optional[float] = None
     group_by_modality_length: bool = field(default=False)
     fully_tune: bool = False
@@ -277,7 +291,46 @@ def init_model(model_args, data_args, training_args, attn_implementation):
         raise NotImplementedError
     elif training_args.task == 'DPO':
         data_module = make_dpo_data_module(tokenizer, data_args=data_args, reference_model=copy.deepcopy(model).cuda())
-
+    
+    
+    elif training_args.task == 'KTO':
+        # KTO needs reference model for computing KL divergence
+        data_module = make_dpo_data_module(
+            tokenizer, 
+            data_args=data_args, 
+            reference_model=copy.deepcopy(model).cuda()
+        )
+    
+    elif training_args.task == 'SimPO':
+        # SimPO doesn't use reference model for loss computation
+        # But we still pass it to compute reference logps for the dataset
+        # (they're just ignored in the trainer)
+        data_module = make_dpo_data_module(
+            tokenizer, 
+            data_args=data_args, 
+            reference_model=copy.deepcopy(model).cuda()
+        )
+    
+    elif training_args.task == 'ORPO':
+        # ORPO doesn't need reference model at all - major memory savings!
+        data_module = make_dpo_data_module(
+            tokenizer, 
+            data_args=data_args, 
+            reference_model=None  # ← Key difference: no reference model
+        )
+    
+    elif training_args.task == 'SPPO':
+        # SPPO uses the same dataset format
+        # Reference model logps computed but not used in loss
+        data_module = make_dpo_data_module(
+            tokenizer, 
+            data_args=data_args, 
+            reference_model=copy.deepcopy(model).cuda()
+        )
+    
+    else:
+        raise ValueError(f"Unknown task: {training_args.task}")
+    
     return model.cuda(), data_module, tokenizer
 
 
@@ -312,15 +365,46 @@ def train(attn_implementation=None):
 
     model, data_module, tokenizer = init_model(
         model_args, data_args, training_args, attn_implementation=attn_implementation)
-
+    
     if training_args.task == 'LM':
         raise NotImplementedError
     elif training_args.task == 'DPO':
-        # TODO
+        from muffin.train.trainers import LLaVA15DPOTrainer
         trainer = LLaVA15DPOTrainer(model=model,
-                                   tokenizer=tokenizer,
-                                   args=training_args,
-                                   **data_module)
+                                    tokenizer=tokenizer,
+                                    args=training_args,
+                                    **data_module)
+    elif training_args.task == 'KTO':
+        from muffin.train.trainers import LLaVA15KTOTrainer
+        trainer = LLaVA15KTOTrainer(model=model,
+                                    tokenizer=tokenizer,
+                                    args=training_args,
+                                    **data_module)
+    elif training_args.task == 'SimPO':
+        from muffin.train.trainers import LLaVA15SimPOTrainer
+        trainer = LLaVA15SimPOTrainer(model=model,
+                                      tokenizer=tokenizer,
+                                      args=training_args,
+                                      **data_module)
+    elif training_args.task == 'ORPO':
+        from muffin.train.trainers import LLaVA15ORPOTrainer
+        trainer = LLaVA15ORPOTrainer(model=model,
+                                     tokenizer=tokenizer,
+                                     args=training_args,
+                                     **data_module)
+    elif training_args.task == 'SPPO':
+        from muffin.train.trainers import LLaVA15SPPOTrainer
+        # Load preference model if provided
+        preference_model = None
+        if training_args.sppo_preference_model_path:
+            preference_model = LlavaLlamaForCausalLM.from_pretrained(
+                training_args.sppo_preference_model_path
+            ).cuda()
+        trainer = LLaVA15SPPOTrainer(model=model,
+                                     tokenizer=tokenizer,
+                                     args=training_args,
+                                     preference_model=preference_model,
+                                     **data_module)
 
     # print(f'Training args: {training_args}')
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):

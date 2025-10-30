@@ -18,11 +18,13 @@ from muffin.data.data_processors import register_data_processor
 from muffin.eval.muffin_inference_logp import inference_logp
 import datasets as hf_datasets
 
+
 def bytes_to_PIL_image(img_buffer):
     img_io = io.BytesIO(img_buffer)
     img_io.seek(0)
     image = Image.open(img_io).convert('RGB')
     return image
+
 
 class RLAIFVDataset(torch_data.Dataset):
     def __init__(self, data_dir: str, reference_model=None,
@@ -34,24 +36,74 @@ class RLAIFVDataset(torch_data.Dataset):
 
         data_path = [file for file in os.listdir(data_dir) if file.endswith('.parquet') and 'logp' in file]
         self.data_path = data_dir
+        
+        # Track whether we're using a reference model
+        self.use_reference_model = reference_model is not None
 
+        # If no precomputed logps exist AND we have a reference model, compute them
         if len(data_path) == 0:
-            assert reference_model is not None, "`reference_model` is mandatory when logps do not exist."
+            if self.use_reference_model:
+                # Reference model provided - compute logps
+                print(f"No precomputed logps found. Computing reference model logps...")
+                
+                if not op.exists('./RLAIF-V-Dataset'):
+                    os.mkdir('./RLAIF-V-Dataset')
+                hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
 
-            if not op.exists('./RLAIF-V-Dataset'):
-                os.mkdir('./RLAIF-V-Dataset')
-            hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
+                inference_logp(reference_model, tokenizer, hf_data, self.data_path,
+                                image_token_len, img_processor, use_im_start_end, is_llava15=is_llava15)
 
-            inference_logp(reference_model, tokenizer, hf_data, self.data_path,
-                            image_token_len, img_processor, use_im_start_end, is_llava15=is_llava15)
+                torch.distributed.barrier()
 
-            torch.distributed.barrier()
-
-            self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+                self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+            else:
+                # No reference model (ORPO case) - load dataset without logps or use dummy logps
+                print(f"No reference model provided (e.g., ORPO training). Loading dataset without precomputed logps.")
+                
+                if not op.exists('./RLAIF-V-Dataset'):
+                    os.mkdir('./RLAIF-V-Dataset')
+                hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
+                
+                # Save dataset with dummy logps for ORPO
+                self._create_dummy_logps_dataset(hf_data, data_dir)
+                
+                torch.distributed.barrier()
+                
+                self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
         else:
+            # Precomputed logps exist - load them
             self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+            print(f"Loaded dataset with {len(self.data)} samples from {data_dir}")
 
         self.line_idx = list(range(len(self.data)))
+
+    def _create_dummy_logps_dataset(self, hf_data, output_dir):
+        """
+        Create a dataset with dummy logps for methods that don't need reference model (like ORPO).
+        """
+        print(f"Creating dataset with dummy logps for reference-free training...")
+        
+        def add_dummy_logps(example):
+            # Create dummy logps structure that matches expected format
+            dummy_logps = {
+                'logps': [
+                    0.0,  # ref_win_logp
+                    0.0,  # ref_win_avg_logp
+                    [],   # ref_win_per_token_logp (empty list)
+                    0.0,  # ref_rej_logp
+                    0.0,  # ref_rej_avg_logp
+                    []    # ref_rej_per_token_logp (empty list)
+                ]
+            }
+            example['logps'] = json.dumps(dummy_logps)
+            return example
+        
+        # Add dummy logps to all examples
+        processed_data = hf_data.map(add_dummy_logps, num_proc=4)
+        
+        # Save to output directory
+        processed_data.save_to_disk(output_dir)
+        print(f"Saved dataset with dummy logps to {output_dir}")
 
     def __len__(self):
         return len(self.data)
@@ -79,14 +131,18 @@ class RLAIFVDataset(torch_data.Dataset):
             "idx": sample['idx'],
             "metainfo": metainfo
         }
-        logps=json.loads(sample['logps'])
+        
+        # Parse logps from the dataset
+        logps = json.loads(sample['logps'])
 
         if type(logps) == type([]):
+            # Old format: direct list
             (data_dict['ref_win_logp'], data_dict['ref_win_avg_logp'], data_dict['ref_win_per_token_logp'],
-            data_dict['ref_rej_logp'], data_dict['ref_rej_avg_logp'], data_dict['ref_rej_per_token_logp']) = logps
+             data_dict['ref_rej_logp'], data_dict['ref_rej_avg_logp'], data_dict['ref_rej_per_token_logp']) = logps
         else:
+            # New format: nested dict
             (data_dict['ref_win_logp'], data_dict['ref_win_avg_logp'], data_dict['ref_win_per_token_logp'],
-            data_dict['ref_rej_logp'], data_dict['ref_rej_avg_logp'], data_dict['ref_rej_per_token_logp']) = logps['logps']
+             data_dict['ref_rej_logp'], data_dict['ref_rej_avg_logp'], data_dict['ref_rej_per_token_logp']) = logps['logps']
 
         return data_dict
 
