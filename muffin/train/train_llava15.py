@@ -308,7 +308,7 @@ def init_model(model_args, data_args, training_args, attn_implementation):
         data_module = make_dpo_data_module(
             tokenizer, 
             data_args=data_args, 
-            reference_model=copy.deepcopy(model).cuda()
+            reference_model=None  # ← Key difference: no reference model
         )
     
     elif training_args.task == 'ORPO':
@@ -397,9 +397,15 @@ def train(attn_implementation=None):
         # Load preference model if provided
         preference_model = None
         if training_args.sppo_preference_model_path:
-            preference_model = LlavaLlamaForCausalLM.from_pretrained(
-                training_args.sppo_preference_model_path
+            print(f"Loading SPPO preference model from: {training_args.sppo_preference_model_path}")
+            # Use AutoModel for flexibility, assuming it's a for-causal-lm with a scoring head
+            from transformers import AutoModelForCausalLM
+            preference_model = AutoModelForCausalLM.from_pretrained(
+                training_args.sppo_preference_model_path,
+                torch_dtype=torch.bfloat16,
+                _attn_implementation="flash_attention_2"
             ).cuda()
+            
         trainer = LLaVA15SPPOTrainer(model=model,
                                      tokenizer=tokenizer,
                                      args=training_args,

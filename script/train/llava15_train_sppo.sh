@@ -44,4 +44,6 @@ deepspeed ./muffin/train/train_llava15.py \
     --dataloader_num_workers 16 \
     --dpo_use_average False \
     --dpo_beta 0.1 \
-    --sppo_gamma 0.5
+    --sppo_gamma 0.5 \
+    --sppo_preference_model_path "PATH_TO/LLaVA-Critic-7B" 
+    

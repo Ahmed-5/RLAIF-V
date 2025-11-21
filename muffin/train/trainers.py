@@ -838,40 +838,41 @@ class LLaVA15SPPOTrainer(ZephyrTrainer):
     
     def compute_preference_scores(self, images, win_inputs, rej_inputs, win_labels, rej_labels):
         """
-        Compute preference scores using a small preference oracle model.
-        Returns positive scores when chosen is preferred.
+        Compute preference scores using a reward model.
+        Returns a single scalar score per response.
         """
         if self.preference_model is None:
-            # Fallback: use simple heuristic based on response length
+            # Fallback to the length heuristic (current behavior)
             win_lengths = (win_labels != -100).sum(dim=-1).float()
             rej_lengths = (rej_labels != -100).sum(dim=-1).float()
-            # Prefer responses that are not too short or too long
             optimal_length = 50.0
             win_penalty = torch.abs(win_lengths - optimal_length) / optimal_length
             rej_penalty = torch.abs(rej_lengths - optimal_length) / optimal_length
-            scores = rej_penalty - win_penalty  # Positive when chosen is better
+            scores = rej_penalty - win_penalty
             return scores
-        
-        # Use actual preference model
+
+        # Use the actual preference model
         with torch.no_grad():
-            # Forward pass for chosen
+            # Create a combined batch for efficiency
             win_outputs = self.preference_model(
                 input_ids=win_inputs,
                 attention_mask=(win_labels != -100),
-                images=images
+                images=images,
+                return_dict=True
             )
             
-            # Forward pass for rejected  
             rej_outputs = self.preference_model(
                 input_ids=rej_inputs,
                 attention_mask=(rej_labels != -100),
-                images=images
+                images=images,
+                return_dict=True
             )
+
+            # Assumes the reward model returns a 'scores' tensor of shape [batch_size, 1]
+            win_scores = win_outputs.scores.squeeze(-1)
+            rej_scores = rej_outputs.scores.squeeze(-1)
             
-            # Extract preference scores (assuming model outputs logits)
-            # Positive score = chosen preferred
-            win_scores = win_outputs.logits[:, -1, :].mean(dim=-1)
-            rej_scores = rej_outputs.logits[:, -1, :].mean(dim=-1)
+            # The preference score is the difference
             preference_scores = win_scores - rej_scores
             
         return preference_scores
