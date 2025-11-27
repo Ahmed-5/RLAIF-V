@@ -4,7 +4,7 @@ task_name=llava15_7b_KTO
 exp_name=llava15_rlaifv_kto
 
 deepspeed ./muffin/train/train_llava15.py \
-    --deepspeed ./script/zero2.json \
+    --deepspeed ./script/zero3.json \
     --model_name_or_path liuhaotian/llava-v1.5-7b \
     --data_dir ./RLAIF-V-Dataset_logps/ \
     --image_folder not_used \
@@ -23,8 +23,8 @@ deepspeed ./muffin/train/train_llava15.py \
     --gradient_accumulation_steps 1 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 167 \
-    --save_total_limit 50 \
+    --save_steps 1336 \
+    --save_total_limit 2 \
     --data_source_names '' \
     --data_source_weights 1 \
     --max_steps 2672 \
