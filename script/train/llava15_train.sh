@@ -23,11 +23,11 @@ deepspeed ./muffin/train/train_llava15.py \
     --gradient_accumulation_steps 1 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 1336 \
+    --save_steps 5196 \
     --save_total_limit 2 \
     --data_source_names '' \
     --data_source_weights 1 \
-    --max_steps 2672 \
+    --max_steps 10392 \
     --learning_rate 5e-7 \
     --weight_decay 0.01 \
     --warmup_ratio 0.05 \
