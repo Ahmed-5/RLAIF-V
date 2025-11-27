@@ -4,7 +4,7 @@ task_name=llava15_7b_ORPO
 exp_name=llava15_rlaifv_orpo
 
 deepspeed ./muffin/train/train_llava15.py \
-    --deepspeed ./script/zero3.json \
+    --deepspeed ./script/zero2.json \
     --model_name_or_path liuhaotian/llava-v1.5-7b \
     --data_dir ./RLAIF-V-Dataset_logps/ \
     --image_folder not_used \
