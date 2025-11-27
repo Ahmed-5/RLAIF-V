@@ -527,7 +527,8 @@ class LLaVA15KTOTrainer(ZephyrTrainer):
         metrics[f'logps_{t}/chosen'] = metrics[f'logps_{t}/desirable']
         metrics[f'logps_{t}/ref_rejected'] = metrics[f'logps_{t}/ref_undesirable']
         metrics[f'logps_{t}/ref_chosen'] = metrics[f'logps_{t}/ref_desirable']
-        metrics[f'rewards_{t}/accuracies'] = metrics[f'rewards_{t}/chosen'] > metrics[f'rewards_{t}/rejected']
+        accuracies = (desirable_rewards > undesirable_rewards).float()
+        metrics[f'rewards_{t}/accuracies'] = gather_and_do_mean(accuracies)
         
         self.log(metrics)
         
