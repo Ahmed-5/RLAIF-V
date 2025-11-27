@@ -520,6 +520,14 @@ class LLaVA15KTOTrainer(ZephyrTrainer):
         metrics[f'logps_{t}/ref_undesirable'] = gather_and_do_mean(ref_undesirable_logp)
         metrics[f'loss_{t}/desirable'] = gather_and_do_mean(desirable_losses)
         metrics[f'loss_{t}/undesirable'] = gather_and_do_mean(undesirable_losses)
+        metrics[f'rewards_{t}/margins'] = metrics[f'rewards_{t}/desirable'] - metrics[f'rewards_{t}/undesirable']
+        metrics[f'rewards_{t}/chosen'] = metrics[f'rewards_{t}/desirable']
+        metrics[f'rewards_{t}/rejected'] = metrics[f'rewards_{t}/undesirable']
+        metrics[f'logps_{t}/rejected'] = metrics[f'logps_{t}/undesirable']
+        metrics[f'logps_{t}/chosen'] = metrics[f'logps_{t}/desirable']
+        metrics[f'logps_{t}/ref_rejected'] = metrics[f'logps_{t}/ref_undesirable']
+        metrics[f'logps_{t}/ref_chosen'] = metrics[f'logps_{t}/ref_desirable']
+        metrics[f'rewards_{t}/accuracies'] = metrics[f'rewards_{t}/chosen'] > metrics[f'rewards_{t}/rejected']
         
         self.log(metrics)
         
