@@ -10,3 +10,4 @@ requirements.txt
 Anaconda3*.sh
 *.egg-info/
 *.tar.gz
+RLAIF-V-Dataset_logps/

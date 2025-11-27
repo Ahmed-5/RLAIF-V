@@ -418,8 +418,20 @@ class LLaVA15KTOTrainer(ZephyrTrainer):
         
         def gather_and_do_mean(x):
             return self._nested_gather(x.mean()).mean().item()
+
         
-        data_dict = inputs
+        data_dict = inputs.copy()
+        
+        # 2. Remove ALL keys that confuse the LLaVA model
+        keys_to_remove = [
+            'ref_win_per_token_logp', 'ref_rej_per_token_logp',
+            'win_token_weight', 'rej_token_weight',
+            'concatenated_attention_mask', 'concatenated_token_weight'
+        ]
+        for k in keys_to_remove:
+            data_dict.pop(k, None)
+        
+        # data_dict = inputs
         
         # Extract desirable and undesirable data
         desirable_input_ids = data_dict.pop('win_input_ids')
@@ -521,6 +533,9 @@ class LLaVA15SimPOTrainer(ZephyrTrainer):
         
         def gather_and_do_mean(x):
             return self._nested_gather(x.mean()).mean().item()
+
+        if "concatenated_attention_mask" in inputs:
+            inputs.pop("concatenated_attention_mask")
         
         data_dict = inputs
         
@@ -725,6 +740,9 @@ class LLaVA15ORPOTrainer(ZephyrTrainer):
         
         def gather_and_do_mean(x):
             return self._nested_gather(x.mean()).mean().item()
+
+        if "concatenated_attention_mask" in inputs:
+            inputs.pop("concatenated_attention_mask")
         
         data_dict = inputs
         
