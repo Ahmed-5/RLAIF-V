@@ -93,6 +93,9 @@ if __name__ == '__main__':
     review_files = [x for x in f_list if x.endswith('.json') and '.mmhal_test_eval' in x]
 
     for file in review_files:
-        print("===>", file)
-        informativeness = cal_informative(file)
-        cal_mmhalscore(file)
+        try:
+            print("===>", file)
+            informativeness = cal_informative(file)
+            cal_mmhalscore(file)
+        except Exception as e:
+            print(f"Error processing {file}: {e}")
