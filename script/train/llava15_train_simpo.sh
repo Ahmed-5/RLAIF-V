@@ -43,5 +43,5 @@ deepspeed ./muffin/train/train_llava15.py \
     --run_name $exp_name \
     --dataloader_num_workers 16 \
     --dpo_use_average False \
-    --dpo_beta 0.1 \
+    --dpo_beta 2.0 \
     --simpo_gamma 0.5
