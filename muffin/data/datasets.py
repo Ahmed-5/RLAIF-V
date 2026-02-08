@@ -49,7 +49,7 @@ class RLAIFVDataset(torch_data.Dataset):
                 if not op.exists('./RLAIF-V-Dataset'):
                     os.mkdir('./RLAIF-V-Dataset')
                 # hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
-                hf_data = hf_datasets.load_from_disk('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
+                hf_data = hf_datasets.load_from_disk('./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
 
                 inference_logp(reference_model, tokenizer, hf_data, self.data_path,
                                 image_token_len, img_processor, use_im_start_end, is_llava15=is_llava15)
@@ -65,7 +65,7 @@ class RLAIFVDataset(torch_data.Dataset):
                 if not op.exists('./RLAIF-V-Dataset'):
                     os.mkdir('./RLAIF-V-Dataset')
                 # hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
-                hf_data = hf_datasets.load_from_disk('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
+                hf_data = hf_datasets.load_from_disk('./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
                 
                 # Save dataset with dummy logps for ORPO
                 self._create_dummy_logps_dataset(hf_data, data_dir)
