@@ -72,8 +72,8 @@ class RLAIFVDataset(torch_data.Dataset):
                 
                 torch.distributed.barrier()
                 
-                self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
-                # self.data = hf_datasets.load_from_disk(data_dir).cast_column("image", hf_datasets.Image(decode=False))
+                # self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+                self.data = hf_datasets.load_from_disk(data_dir).cast_column("image", hf_datasets.Image(decode=False))
         else:
             # Precomputed logps exist - load them
             self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
