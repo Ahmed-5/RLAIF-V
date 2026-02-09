@@ -76,8 +76,8 @@ class RLAIFVDataset(torch_data.Dataset):
                 self.data = hf_datasets.load_from_disk(data_dir).cast_column("image", hf_datasets.Image(decode=False))
         else:
             # Precomputed logps exist - load them
-            self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
-            # self.data = hf_datasets.load_from_disk(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+            # self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+            self.data = hf_datasets.load_from_disk(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
             print(f"Loaded dataset with {len(self.data)} samples from {data_dir}")
 
         self.line_idx = list(range(len(self.data)))
