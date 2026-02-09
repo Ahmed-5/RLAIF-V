@@ -79,6 +79,7 @@ class RLAIFVDataset(torch_data.Dataset):
             # self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
             self.data = hf_datasets.load_from_disk(data_dir).cast_column("image", hf_datasets.Image(decode=False))
             print(f"Loaded dataset with {len(self.data)} samples from {data_dir}")
+            print(f"Sample logps content for first data point:", self.data[0])
 
         self.line_idx = list(range(len(self.data)))
 
@@ -138,7 +139,7 @@ class RLAIFVDataset(torch_data.Dataset):
         }
         
         # Parse logps from the dataset
-        print(f"Parsing logps for sample idx {sample['idx']} with logps content: {sample['logps']}", sample)
+        # print(f"Parsing logps for sample idx {sample['idx']} with logps content: {sample['logps']}", sample)
         logps = json.loads(sample['logps'])
 
         if type(logps) == type([]):
