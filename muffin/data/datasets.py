@@ -138,6 +138,7 @@ class RLAIFVDataset(torch_data.Dataset):
         }
         
         # Parse logps from the dataset
+        print(f"Parsing logps for sample idx {sample['idx']} with logps content: {sample['logps']}", sample)
         logps = json.loads(sample['logps'])
 
         if type(logps) == type([]):
