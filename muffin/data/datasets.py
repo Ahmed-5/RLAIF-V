@@ -48,36 +48,36 @@ class RLAIFVDataset(torch_data.Dataset):
                 
                 if not op.exists('./RLAIF-V-Dataset'):
                     os.mkdir('./RLAIF-V-Dataset')
-                # hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
-                hf_data = hf_datasets.load_from_disk('./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
+                hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
+                # hf_data = hf_datasets.load_from_disk('./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
 
                 inference_logp(reference_model, tokenizer, hf_data, self.data_path,
                                 image_token_len, img_processor, use_im_start_end, is_llava15=is_llava15)
 
                 torch.distributed.barrier()
 
-                # self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
-                self.data = hf_datasets.load_from_disk(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+                self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+                # self.data = hf_datasets.load_from_disk(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
             else:
                 # No reference model (ORPO case) - load dataset without logps or use dummy logps
                 print(f"No reference model provided (e.g., ORPO training). Loading dataset without precomputed logps.")
                 
                 if not op.exists('./RLAIF-V-Dataset'):
                     os.mkdir('./RLAIF-V-Dataset')
-                # hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
-                hf_data = hf_datasets.load_from_disk('./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
+                hf_data = hf_datasets.load_dataset('openbmb/RLAIF-V-Dataset', cache_dir='./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
+                # hf_data = hf_datasets.load_from_disk('./RLAIF-V-Dataset')['train'].cast_column("image", hf_datasets.Image(decode=False))
                 
                 # Save dataset with dummy logps for ORPO
                 self._create_dummy_logps_dataset(hf_data, data_dir)
                 
                 torch.distributed.barrier()
                 
-                # self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
-                self.data = hf_datasets.load_from_disk(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+                self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+                # self.data = hf_datasets.load_from_disk(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
         else:
             # Precomputed logps exist - load them
-            # self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
-            self.data = hf_datasets.load_from_disk(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+            self.data = hf_datasets.load_dataset(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
+            # self.data = hf_datasets.load_from_disk(data_dir)['train'].cast_column("image", hf_datasets.Image(decode=False))
             print(f"Loaded dataset with {len(self.data)} samples from {data_dir}")
 
         self.line_idx = list(range(len(self.data)))
